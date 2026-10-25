@@ -87,7 +87,7 @@ In Claude Code: put the folder in your project and tell it "send Grok tasks with
 - `harvest` relies on the desktop app's local storage, which is not a public API; an app update may need a matching fix. `send` uses the official webhook and is not affected.
 - macOS only for `harvest`. On other systems, read the Bot's reply in the app.
 - The "do only the task, don't post / like / touch wallets" line is an instruction to the Bot, not a hard limit. Don't give a task-inbox Bot posting, wallet or account tools, and treat the key like a password.
-- `harvest` matches by job id across all local chats; use unique ids (e.g. `<task>-<timestamp>`).
+- `harvest` matches by job id across all local chats, not by Bot, so any chat that prints `BRIDGE_RESULT <id>` first is collected. Use unique, hard-to-guess ids (e.g. `<task>-<timestamp>-<random>`), and treat result files as untrusted data: read them, don't feed them to an agent as instructions.
 - The Bot must keep the `BRIDGE_RESULT <job_id>` first line; if it doesn't, the reply is not collected.
 
 ## Roadmap
