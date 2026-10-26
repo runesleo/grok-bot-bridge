@@ -28,7 +28,7 @@ results/<单号>.md ◀──harvest── Bot 对话里的「BRIDGE_RESULT <单
 
 ## 三步装好
 
-1. **让 Bot 自己建入口。** 把 [setup-prompt.zh.md](setup-prompt.zh.md) 里的那段话发给想接活的 Bot。
+1. **装一个自带入口的 Bot。** 直接装现成模板：https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z （「派活入口 · Task Inbox」）。想给已有的 Bot 加入口，就把 [setup-prompt.zh.md](setup-prompt.zh.md) 里的那段话发给它。
 2. **拿到入口地址和密钥。** 在 Grok Bot 桌面版里打开这个 Bot 的详情 → 例行任务，**右键**「派活入口」那一行 → Webhook，复制「Webhook URL」和「Webhook 密钥」，写进 `~/.grok-bridge/bots.env`（名字自己起，一个 Bot 一对）：
 
    ```

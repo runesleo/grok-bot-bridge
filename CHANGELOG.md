@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Ready-made Grok Bot template with the inbox routine built in: https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z
+
 ## [0.1.0] - 2026-10-25
 
 ### Added
