@@ -68,7 +68,18 @@ python3 grok_bridge.py harvest
 python3 grok_bridge.py status job-001
 ```
 
-In Claude Code: put the folder in your project and tell it "send Grok tasks with `grok_bridge.py send`, job id `<task>-<time>`; run `harvest` after a while and read `results/`."
+In Claude Code, install this repository as a plugin. The manifest is `.claude-plugin/plugin.json` at the repo root.
+
+- `/send-to-grok-bot` runs `send`. The same job id goes out once.
+- `/grok-bot-results` runs `harvest` and reads `results/<job_id>.md`.
+
+The first run executes `python3 grok_bridge.py setup`. That creates `~/.grok-bridge/bots.env` with mode 600 when the file is missing. You copy the webhook URL and key from the Grok Bot app into that file on your machine. Keep both out of the chat. The script does not print them.
+
+```bash
+git clone https://github.com/runesleo/grok-bot-bridge.git
+cd grok-bot-bridge
+claude --plugin-dir .
+```
 
 ## Requirements
 
@@ -93,7 +104,6 @@ In Claude Code: put the folder in your project and tell it "send Grok tasks with
 ## Roadmap
 
 - Wait-for-reply mode (`send --wait`) with a timeout.
-- A `/send-to-grok` skill file for Claude Code.
 
 ## About the author
 

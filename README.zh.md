@@ -68,7 +68,18 @@ python3 grok_bridge.py harvest
 python3 grok_bridge.py status job-001
 ```
 
-在 Claude Code 里用：把这个文件夹放进项目，告诉它「派给 Grok 的活用 grok_bridge.py send，单号用 <任务名>-<时间>，隔一会儿跑 harvest，去 results/ 读结果」。
+在 Claude Code 里把这个仓库装成插件。清单在仓库根的 `.claude-plugin/plugin.json`。
+
+- `/send-to-grok-bot` 走 `send`。同一个单号只发一次。
+- `/grok-bot-results` 走 `harvest`，再读 `results/<单号>.md`。
+
+第一次运行会执行 `python3 grok_bridge.py setup`。本机还没有 `~/.grok-bridge/bots.env` 时，它会建一个权限 600 的空文件，然后让你在自己电脑上把 webhook 地址和钥匙写进去。从 Grok Bot 应用里复制。命令不会让你把钥匙贴进对话，脚本也不会把钥匙打出来。
+
+```bash
+git clone https://github.com/runesleo/grok-bot-bridge.git
+cd grok-bot-bridge
+claude --plugin-dir .
+```
 
 ## 需要什么
 
@@ -93,7 +104,6 @@ python3 grok_bridge.py status job-001
 ## 接下来
 
 - `send --wait`：发完等着收结果，带超时。
-- 给 Claude Code 的 `/send-to-grok` skill 文件。
 
 ## 关于作者
 

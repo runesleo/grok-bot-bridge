@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Grok Bot Bridge: let Claude Code / any script hand tasks to your Grok Bots, once, and get the answers back.
 
+  setup    Create ~/.grok-bridge/bots.env (mode 600) when it is missing.
+           Prints READY or NEED_WEBHOOK. Never prints the webhook URL or key.
   send     POST {job_id, task} to a Bot's webhook routine. Each job_id goes out at most once;
            a timeout is recorded as UNKNOWN and never retried automatically.
   harvest  Read the Grok Bot desktop app's local chat copies (macOS) for replies that start
@@ -9,6 +11,7 @@
 
 Config: ~/.grok-bridge/bots.env, one pair per Bot (chmod 600):
   BRIDGE_URL_RESEARCH=https://...      BRIDGE_KEY_RESEARCH=...
+Set GROK_BRIDGE_HOME to move the config, ledger, and results together.
 Standard library only. Python 3.9+.
 """
 from __future__ import annotations
@@ -23,15 +26,65 @@ RESULT_RE = re.compile(r"BRIDGE_RESULT\s+(\S+)\s*$")
 JOB_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")  # also a safe file name
 
 
+_CONFIG_STUB = (
+    "# Local config for grok-bot-bridge. One pair per Bot.\n"
+    "# Edit this file on your machine. Do not commit it. Do not paste the key into chat.\n"
+    "# BRIDGE_URL_RESEARCH=\n"
+    "# BRIDGE_KEY_RESEARCH=\n"
+)
+
+
 def load_env(path=ENV) -> dict:
     if not path.exists():
-        raise SystemExit(f"no config: create {path} with BRIDGE_URL_<NAME>= / BRIDGE_KEY_<NAME>= (see README)")
+        raise SystemExit(
+            "no config: run `grok_bridge.py setup`, then fill BRIDGE_URL_<NAME> and "
+            "BRIDGE_KEY_<NAME> in ~/.grok-bridge/bots.env (or bots.env under GROK_BRIDGE_HOME). "
+            "Do not paste the key into chat."
+        )
     env = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if "=" in line and not line.lstrip().startswith("#"):
             k, v = line.split("=", 1)
             env[k.strip()] = v.strip()
     return env
+
+
+def bot_names(env: dict) -> list[str]:
+    """Bot names that have both an https URL and a key. The values are not returned."""
+    found = []
+    for key, url in env.items():
+        if not key.startswith("BRIDGE_URL_"):
+            continue
+        name = key[len("BRIDGE_URL_"):]
+        if name and isinstance(url, str) and url.startswith("https://") and env.get(f"BRIDGE_KEY_{name}"):
+            found.append(name)
+    return sorted(found)
+
+
+def ensure_local_config(home: Path | None = None) -> dict:
+    """Create bots.env (mode 600) when missing. Status only: never the URL or the key."""
+    home = HOME if home is None else Path(home)
+    env_path = home / "bots.env"
+    created = False
+    if not env_path.exists():
+        made_dir = not home.exists()
+        home.mkdir(parents=True, exist_ok=True)
+        if made_dir:
+            os.chmod(home, 0o700)
+        try:
+            fd = os.open(env_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            pass
+        else:
+            try:
+                os.write(fd, _CONFIG_STUB.encode())
+            finally:
+                os.close(fd)
+            os.chmod(env_path, 0o600)
+            created = True
+    env = load_env(env_path) if env_path.is_file() else {}
+    names = bot_names(env)
+    return {"status": "READY" if names else "NEED_WEBHOOK", "created": created, "bots": names}
 
 
 def rows(ledger=LEDGER) -> list[dict]:
@@ -141,7 +194,7 @@ def harvest(*, ledger=LEDGER, results=RESULTS, reader=local_replies) -> list[str
         results.mkdir(parents=True, exist_ok=True)
         out = results / f"{job_id}.md"
         out.write_text(text + "\n", encoding="utf-8")
-        _append(ledger, {"ts": int(time.time()), "job_id": job_id, "status": "REPLIED", "result": str(out)})
+        _append(ledger, {"ts": int(time.time()), "job_id": job_id, "status": "REPLIED", "result": f"{job_id}.md"})
         got.append(job_id)
     return got
 
@@ -149,6 +202,7 @@ def harvest(*, ledger=LEDGER, results=RESULTS, reader=local_replies) -> list[str
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("setup", help="create a local bots.env if missing; prints status only")
     s = sub.add_parser("send")
     s.add_argument("bot", help="name used in bots.env, e.g. research")
     s.add_argument("job_id", help="unique id for this task")
@@ -157,13 +211,16 @@ def main() -> int:
     st = sub.add_parser("status")
     st.add_argument("job_id")
     a = ap.parse_args()
+    if a.cmd == "setup":
+        print(json.dumps(ensure_local_config(), ensure_ascii=False))
+        return 0
     if a.cmd == "send":
         res = send(a.bot, a.job_id, a.task if a.task is not None else sys.stdin.read())
         print(json.dumps(res, ensure_ascii=False))
         return 0 if res["status"] in ("SENT", "ALREADY_SENT") else 1
     if a.cmd == "harvest":
         if not APP_STORE.is_dir():
-            print(f"Grok Bot desktop app data not found at {APP_STORE}; harvest needs the macOS app", file=sys.stderr)
+            print("Grok Bot macOS app chat copies were not found; harvest needs that app on this Mac", file=sys.stderr)
             return 2
         print(json.dumps({"collected": harvest()}, ensure_ascii=False))
         return 0

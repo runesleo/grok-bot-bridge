@@ -4,7 +4,7 @@ Follow these steps for the user. Never print, log or commit the webhook key.
 
 1. Clone and enter: `git clone https://github.com/runesleo/grok-bot-bridge.git && cd grok-bot-bridge` (or copy `grok_bridge.py` into the project).
 2. Ask the user to install the template https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z, or to send `setup-prompt.md` (or `setup-prompt.zh.md`) to each existing Grok Bot that should take tasks, and wait until the Bot answers `BRIDGE_ROUTINE_READY`.
-3. Ask the user to copy each Bot's Webhook URL and key (Bot details → Routines → right-click the routine → Webhook) into `~/.grok-bridge/bots.env` as `BRIDGE_URL_<NAME>=` / `BRIDGE_KEY_<NAME>=`, after you create it with `mkdir -p ~/.grok-bridge && touch ~/.grok-bridge/bots.env && chmod 600 ~/.grok-bridge/bots.env`. Do not ask the user to paste the key into the chat.
+3. Run `python3 grok_bridge.py setup`. It creates `~/.grok-bridge/bots.env` (mode 600) when the file is missing and prints `NEED_WEBHOOK` or `READY`, with no URL and no key. Ask the user to edit that file on their machine and add `BRIDGE_URL_<NAME>=` / `BRIDGE_KEY_<NAME>=` from the Grok Bot app (Bot details → Routines → right-click the routine → Webhook). Do not ask the user to paste the URL or the key into the chat. Do not open the file, print it, or commit it.
 4. Read-only self-check (sends nothing):
 
    ```bash

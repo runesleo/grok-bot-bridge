@@ -1,0 +1,13 @@
+{
+  "name": "grok-bot-bridge",
+  "version": "0.2.0",
+  "description": "Send a task to your Grok Bot once, then collect the BRIDGE_RESULT reply.",
+  "author": {
+    "name": "Leo",
+    "url": "https://leolabs.me"
+  },
+  "homepage": "https://github.com/runesleo/grok-bot-bridge",
+  "repository": "https://github.com/runesleo/grok-bot-bridge",
+  "license": "MIT",
+  "keywords": ["grok", "grok-bot", "tasks"]
+}
