@@ -1,6 +1,7 @@
 {
   "name": "grok-bot-bridge",
-  "version": "0.2.0",
+  "displayName": "Grok Bot Task Inbox",
+  "version": "0.3.0",
   "description": "Send a task to your Grok Bot once, then collect the BRIDGE_RESULT reply.",
   "author": {
     "name": "Leo",
@@ -9,5 +10,31 @@
   "homepage": "https://github.com/runesleo/grok-bot-bridge",
   "repository": "https://github.com/runesleo/grok-bot-bridge",
   "license": "MIT",
-  "keywords": ["grok", "grok-bot", "tasks"]
+  "keywords": ["grok", "grok-bot", "tasks"],
+  "icon": "./.claude-plugin/icon.png",
+  "userConfig": {
+    "bridge_url": {
+      "type": "string",
+      "title": "Webhook URL",
+      "description": "HTTPS webhook URL from the Grok Bot inbox routine. In the app: Bot details, Routines, right-click the inbox row, Webhook.",
+      "required": true
+    },
+    "bridge_key": {
+      "type": "string",
+      "title": "Webhook key",
+      "description": "Webhook key from the same Grok Bot inbox routine. Claude Code stores it in secure storage.",
+      "sensitive": true,
+      "required": true
+    }
+  },
+  "mcpServers": {
+    "grok-bot-bridge": {
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/grok_bridge.py", "mcp"],
+      "env": {
+        "BRIDGE_PLUGIN_URL": "${user_config.bridge_url}",
+        "BRIDGE_PLUGIN_KEY": "${user_config.bridge_key}"
+      }
+    }
+  }
 }

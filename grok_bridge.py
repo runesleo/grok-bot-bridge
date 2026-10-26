@@ -5,13 +5,17 @@
            Prints READY or NEED_WEBHOOK. Never prints the webhook URL or key.
   send     POST {job_id, task} to a Bot's webhook routine. Each job_id goes out at most once;
            a timeout is recorded as UNKNOWN and never retried automatically.
+           --url and --key supply the pair and skip the config file.
   harvest  Read the Grok Bot desktop app's local chat copies (macOS) for replies that start
            with `BRIDGE_RESULT <job_id>`, save each to results/<job_id>.md, mark it REPLIED.
   status   Show the latest ledger row for a job.
+  mcp      Stdio MCP for the Claude Code plugin. Uses BRIDGE_PLUGIN_URL and BRIDGE_PLUGIN_KEY
+           from the environment. Does not read the config file.
 
-Config: ~/.grok-bridge/bots.env, one pair per Bot (chmod 600):
+Running this file yourself: ~/.grok-bridge/bots.env, one pair per Bot (chmod 600):
   BRIDGE_URL_RESEARCH=https://...      BRIDGE_KEY_RESEARCH=...
 Set GROK_BRIDGE_HOME to move the config, ledger, and results together.
+The Claude Code plugin does not read that file. Claude Code asks for bridge_url and bridge_key.
 Standard library only. Python 3.9+.
 """
 from __future__ import annotations
@@ -24,6 +28,8 @@ ENV, LEDGER, RESULTS = HOME / "bots.env", HOME / "sent.jsonl", HOME / "results"
 APP_STORE = Path.home() / "Library/Application Support/Grok Bot/sand-client-persistence"
 RESULT_RE = re.compile(r"BRIDGE_RESULT\s+(\S+)\s*$")
 JOB_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")  # also a safe file name
+PLUGIN_VERSION = "0.3.0"
+PLUGIN_BOT = "INBOX"
 
 
 _CONFIG_STUB = (
@@ -34,7 +40,9 @@ _CONFIG_STUB = (
 )
 
 
-def load_env(path=ENV) -> dict:
+def load_env(path=None) -> dict:
+    if path is None:
+        path = ENV
     if not path.exists():
         raise SystemExit(
             "no config: run `grok_bridge.py setup`, then fill BRIDGE_URL_<NAME> and "
@@ -112,7 +120,11 @@ def post(url, key, body, timeout=30) -> int:
         return r.status
 
 
-def send(bot, job_id, task, *, ledger=LEDGER, env=None, poster=post) -> dict:
+def send(bot, job_id, task, *, ledger=None, env=None, poster=None) -> dict:
+    if ledger is None:
+        ledger = LEDGER
+    if poster is None:
+        poster = post
     if not JOB_ID_RE.match(job_id):
         return {"job_id": job_id, "status": "BAD_JOB_ID"}
     # UNKNOWN counts as sent: the Bot may have it already. Only a refused send may go again.
@@ -199,23 +211,135 @@ def harvest(*, ledger=LEDGER, results=RESULTS, reader=local_replies) -> list[str
     return got
 
 
+def _present(value: str | None) -> str:
+    text = (value or "").strip()
+    if not text or "${" in text:
+        return ""
+    return text
+
+
+def send_configured(url, key, job_id, task, *, ledger=None, poster=None) -> dict:
+    """Send one explicit pair. Never reads the config file."""
+    url, key = _present(url), _present(key)
+    env = {f"BRIDGE_URL_{PLUGIN_BOT}": url, f"BRIDGE_KEY_{PLUGIN_BOT}": key}
+    return send(PLUGIN_BOT, job_id, task, ledger=ledger, env=env, poster=poster)
+
+
+_SEND_TOOL = {
+    "name": "send_task",
+    "description": (
+        "Post one task to the Grok Bot webhook saved in this plugin's options. "
+        "Does not read a credential file. The same job id is sent at most once."
+    ),
+    "inputSchema": {
+        "type": "object",
+        "properties": {
+            "job_id": {"type": "string"},
+            "task": {"type": "string"},
+        },
+        "required": ["job_id", "task"],
+        "additionalProperties": False,
+    },
+}
+
+
+def mcp_send_task(arguments) -> tuple[str, bool]:
+    if not isinstance(arguments, dict):
+        arguments = {}
+    job_id, task = arguments.get("job_id"), arguments.get("task")
+    if not isinstance(job_id, str) or not isinstance(task, str):
+        return json.dumps({"status": "BAD_JOB_ID"}, ensure_ascii=False), True
+    result = send_configured(
+        os.environ.get("BRIDGE_PLUGIN_URL"),
+        os.environ.get("BRIDGE_PLUGIN_KEY"),
+        job_id,
+        task,
+    )
+    failed = result.get("status") in {"NO_WEBHOOK", "NOT_HTTPS", "BAD_JOB_ID", "FAILED"}
+    return json.dumps(result, ensure_ascii=False), failed
+
+
+def mcp_handle(msg: dict) -> dict | None:
+    if not isinstance(msg, dict):
+        return None
+    method, mid = msg.get("method"), msg.get("id")
+    if isinstance(method, str) and method.startswith("notifications/"):
+        return None
+    if method == "initialize":
+        requested = (msg.get("params") or {}).get("protocolVersion")
+        version = requested if isinstance(requested, str) and requested else "2024-11-05"
+        return {"jsonrpc": "2.0", "id": mid, "result": {
+            "protocolVersion": version,
+            "capabilities": {"tools": {}},
+            "serverInfo": {"name": "grok-bot-bridge", "version": PLUGIN_VERSION},
+        }}
+    if method == "ping":
+        return {"jsonrpc": "2.0", "id": mid, "result": {}}
+    if method == "tools/list":
+        return {"jsonrpc": "2.0", "id": mid, "result": {"tools": [_SEND_TOOL]}}
+    if method == "tools/call":
+        params = msg.get("params") or {}
+        name = params.get("name")
+        if name != "send_task":
+            return {"jsonrpc": "2.0", "id": mid, "result": {
+                "content": [{"type": "text", "text": "unknown tool"}], "isError": True,
+            }}
+        text, failed = mcp_send_task(params.get("arguments") or {})
+        return {"jsonrpc": "2.0", "id": mid, "result": {
+            "content": [{"type": "text", "text": text}], "isError": failed,
+        }}
+    if mid is not None:
+        return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "method not found"}}
+    return None
+
+
+def mcp_serve() -> int:
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            msg = json.loads(line)
+        except ValueError:
+            continue
+        try:
+            reply = mcp_handle(msg)
+        except Exception:  # noqa: BLE001 - never print the URL, the key, or the traceback
+            reply = {"jsonrpc": "2.0", "id": msg.get("id") if isinstance(msg, dict) else None,
+                     "error": {"code": -32603, "message": "internal error"}}
+        if reply is not None:
+            sys.stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
+            sys.stdout.flush()
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("setup", help="create a local bots.env if missing; prints status only")
     s = sub.add_parser("send")
+    s.add_argument("--url", default=None, help="webhook URL; if set with or without --key, do not read the config file")
+    s.add_argument("--key", default=None, help="webhook key; if set with or without --url, do not read the config file")
     s.add_argument("bot", help="name used in bots.env, e.g. research")
     s.add_argument("job_id", help="unique id for this task")
     s.add_argument("task", nargs="?", help="task text; omit to read stdin")
     sub.add_parser("harvest")
+    sub.add_parser("mcp", help="stdio MCP for the Claude Code plugin; does not read the config file")
     st = sub.add_parser("status")
     st.add_argument("job_id")
     a = ap.parse_args()
     if a.cmd == "setup":
         print(json.dumps(ensure_local_config(), ensure_ascii=False))
         return 0
+    if a.cmd == "mcp":
+        return mcp_serve()
     if a.cmd == "send":
-        res = send(a.bot, a.job_id, a.task if a.task is not None else sys.stdin.read())
+        task = a.task if a.task is not None else sys.stdin.read()
+        if a.url is not None or a.key is not None:
+            env = {f"BRIDGE_URL_{a.bot.upper()}": a.url or "", f"BRIDGE_KEY_{a.bot.upper()}": a.key or ""}
+            res = send(a.bot, a.job_id, task, env=env)
+        else:
+            res = send(a.bot, a.job_id, task)
         print(json.dumps(res, ensure_ascii=False))
         return 0 if res["status"] in ("SENT", "ALREADY_SENT") else 1
     if a.cmd == "harvest":

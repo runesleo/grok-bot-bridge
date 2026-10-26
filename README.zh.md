@@ -4,7 +4,7 @@
 
 ![license](https://img.shields.io/badge/license-MIT-blue) ![python](https://img.shields.io/badge/python-3.9%2B-blue) ![deps](https://img.shields.io/badge/dependencies-none-green)
 
-[English](README.md)
+[English](https://raw.githubusercontent.com/runesleo/grok-bot-bridge/main/README.md)
 
 ## 你能得到什么
 
@@ -28,7 +28,7 @@ results/<单号>.md ◀──harvest── Bot 对话里的「BRIDGE_RESULT <单
 
 ## 三步装好
 
-1. **装一个自带入口的 Bot。** 直接装现成模板：https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z （「派活入口 · Task Inbox」）。想给已有的 Bot 加入口，就把 [setup-prompt.zh.md](setup-prompt.zh.md) 里的那段话发给它。
+1. **装一个自带入口的 Bot。** 直接装现成模板：https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z （「派活入口 · Task Inbox」）。想给已有的 Bot 加入口，就把 [setup-prompt.zh.md](https://raw.githubusercontent.com/runesleo/grok-bot-bridge/main/setup-prompt.zh.md) 里的那段话发给它。
 2. **拿到入口地址和密钥。** 在 Grok Bot 桌面版里打开这个 Bot 的详情 → 例行任务，**右键**「派活入口」那一行 → Webhook，复制「Webhook URL」和「Webhook 密钥」，写进 `~/.grok-bridge/bots.env`（名字自己起，一个 Bot 一对）：
 
    ```
@@ -52,7 +52,7 @@ results/<单号>.md ◀──harvest── Bot 对话里的「BRIDGE_RESULT <单
    cd grok-bot-bridge
    ```
 
-让 AI 帮你装：把 [install.md](install.md) 丢给 Claude Code / Codex，它会照着一步步做。
+让 AI 帮你装：把 [install.md](https://raw.githubusercontent.com/runesleo/grok-bot-bridge/main/install.md) 丢给 Claude Code / Codex，它会照着一步步做。
 
 ## 上手
 
@@ -68,12 +68,12 @@ python3 grok_bridge.py harvest
 python3 grok_bridge.py status job-001
 ```
 
-在 Claude Code 里把这个仓库装成插件。清单在仓库根的 `.claude-plugin/plugin.json`。
+在 Claude Code 里把这个仓库装成插件。清单在仓库根的 `.claude-plugin/plugin.json`。目录里的展示名是 Grok Bot Task Inbox。
 
-- `/send-to-grok-bot` 走 `send`。同一个单号只发一次。
-- `/grok-bot-results` 走 `harvest`，再读 `results/<单号>.md`。
+启用插件时，Claude Code 会问两项：webhook 地址，和 webhook 钥匙。钥匙是敏感项，存在系统的安全存储里，不会写进命令正文。插件命令不读 `~/.grok-bridge/bots.env`。那个文件只给单独运行 `grok_bridge.py` 用。
 
-第一次运行会执行 `python3 grok_bridge.py setup`。本机还没有 `~/.grok-bridge/bots.env` 时，它会建一个权限 600 的空文件，然后让你在自己电脑上把 webhook 地址和钥匙写进去。从 Grok Bot 应用里复制。命令不会让你把钥匙贴进对话，脚本也不会把钥匙打出来。
+- `/send-to-grok-bot` 调用随插件打包的本地工具 `send_task`。同一个单号只发一次。
+- `/grok-bot-results` 走 `harvest`，再读 `results/<单号>.md`。收回复不需要 webhook。
 
 ```bash
 git clone https://github.com/runesleo/grok-bot-bridge.git
@@ -87,7 +87,7 @@ claude --plugin-dir .
 - 能建例行任务和 webhook 触发的 Grok Bot。
 - `harvest` 要在装了 **Grok Bot macOS 桌面版**的同一台 Mac 上跑：它只读 App 存在本机的对话副本，不改任何东西。
 
-**隐私：** 密钥等于这个入口的钥匙，不要贴进聊天、截图或公开仓库。配置、账本和结果都在 `~/.grok-bridge/`（设置 `GROK_BRIDGE_HOME` 会把这三样一起换位置）；入口地址不是 `https://` 开头的，脚本直接拒发，除了你配置的 webhook，不往任何地方发数据。
+**隐私：** 密钥等于这个入口的钥匙，不要贴进聊天、截图或公开仓库。装成插件时，Claude Code 在启用时询问地址和钥匙，命令不读本机的 webhook 文件。单独跑脚本时，配置、账本和结果都在 `~/.grok-bridge/`（设置 `GROK_BRIDGE_HOME` 会把这三样一起换位置）。入口地址不用 HTTPS 的，脚本直接拒发。除了你配置的 webhook，不往任何地方发数据。
 
 ## 实测
 

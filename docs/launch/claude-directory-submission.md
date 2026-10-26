@@ -21,8 +21,8 @@ Validate 通过后再往下。推了新提交就要重新 Validate。这次不�
 
 | 字段 | 值 |
 | --- | --- |
-| name | `grok-bot-bridge` |
-| version | `0.2.0`（随这次功能写在清单里，还没打 tag） |
+| name | `grok-bot-bridge`（清单 `name`。展示名 `displayName` 是 `Grok Bot Task Inbox`） |
+| version | `0.3.0`（随这次功能写在清单里，还没打 tag） |
 | description | Send a task to your Grok Bot once, then collect the BRIDGE_RESULT reply. |
 | license | MIT（仓库根 `LICENSE`） |
 | author | Leo，https://leolabs.me |
@@ -32,8 +32,8 @@ Validate 通过后再往下。推了新提交就要重新 Validate。这次不�
 
 提交前你再看一遍这四条。下面是按当前代码写的草稿答案。
 
-1. 会不会读取或保存个人数据：会。任务正文是用户自己写的。webhook 地址和钥匙存在用户本机的 `~/.grok-bridge/bots.env`（设了 `GROK_BRIDGE_HOME` 就在那个目录的 `bots.env`），新建时权限 600。账本和 `results/<job_id>.md` 也在本机。`harvest` 只读本机 Grok Bot macOS 应用留下的对话副本。插件没有自己的服务器，不上传这个配置文件。
-2. 会不会把数据发到已声明连接器以外的地方：会把 `{job_id, task}` POST 到用户写进配置的那个 https webhook，也就是用户自己的 Grok Bot。别处不发。没有远程 MCP。地址不是 `https://` 就拒发，避免钥匙走明文。README 的 Privacy 段写了同一件事。
+1. 会不会读取或保存个人数据：会。任务正文是用户自己写的。插件不从本机文件读 webhook 地址和钥匙：Claude Code 启用插件时询问，地址是普通 `userConfig`，钥匙是 `sensitive: true`，进系统安全存储。随插件打包的本地 MCP 只在进程环境里拿到这两项，命令正文里没有钥匙。单独运行 `grok_bridge.py` 时，地址和钥匙仍可以在 `~/.grok-bridge/bots.env`（设了 `GROK_BRIDGE_HOME` 就在那个目录的 `bots.env`，新建时权限 600）。账本和 `results/<job_id>.md` 在本机。`harvest` 只读本机 Grok Bot macOS 应用留下的对话副本。没有自己的服务器，不上传配置。
+2. 会不会把数据发到已声明连接器以外的地方：会把 `{job_id, task}` POST 到用户填进插件选项的那个 https webhook（单独跑脚本时，是脚本配置里的那个），也就是用户自己的 Grok Bot。别处不发。没有远程 MCP。本地 MCP 只是随包脚本。地址不是 `https://` 就拒发，避免钥匙走明文。README 的 Privacy 段写了同一件事。
 3. 留多久：留在用户自己的电脑上，直到他们删掉配置目录里的账本和结果。插件侧没有服务器，也就没有另一份保存期限。
 4. 是否面向 18 岁以下：否。给自己的编程代理派活用。
 

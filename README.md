@@ -4,7 +4,7 @@
 
 ![license](https://img.shields.io/badge/license-MIT-blue) ![python](https://img.shields.io/badge/python-3.9%2B-blue) ![deps](https://img.shields.io/badge/dependencies-none-green)
 
-[中文说明](README.zh.md)
+[中文说明](https://raw.githubusercontent.com/runesleo/grok-bot-bridge/main/README.zh.md)
 
 ## What you get
 
@@ -28,7 +28,7 @@ results/<job_id>.md ◀──harvest── "BRIDGE_RESULT <job_id>\n…" in the 
 
 ## Setup
 
-1. **Get a Bot with the inbox built in.** Install the ready-made template: https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z ("派活入口 · Task Inbox"). Or, to add an inbox to a Bot you already have, send [setup-prompt.md](setup-prompt.md) in its chat.
+1. **Get a Bot with the inbox built in.** Install the ready-made template: https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z ("派活入口 · Task Inbox"). Or, to add an inbox to a Bot you already have, send [setup-prompt.md](https://raw.githubusercontent.com/runesleo/grok-bot-bridge/main/setup-prompt.md) in its chat.
 2. **Copy the webhook.** In the Grok Bot desktop app, open the Bot's details → Routines, **right-click** the inbox routine row ("派活入口" in the template, "Task Inbox" if you used the prompt) → Webhook, and copy the Webhook URL and key into `~/.grok-bridge/bots.env` (pick any name, one pair per Bot):
 
    ```
@@ -52,7 +52,7 @@ results/<job_id>.md ◀──harvest── "BRIDGE_RESULT <job_id>\n…" in the 
    cd grok-bot-bridge
    ```
 
-For agents: [install.md](install.md) is written for Claude Code / Codex to follow.
+For agents: [install.md](https://raw.githubusercontent.com/runesleo/grok-bot-bridge/main/install.md) is written for Claude Code / Codex to follow.
 
 ## Quick start
 
@@ -68,12 +68,12 @@ python3 grok_bridge.py harvest
 python3 grok_bridge.py status job-001
 ```
 
-In Claude Code, install this repository as a plugin. The manifest is `.claude-plugin/plugin.json` at the repo root.
+In Claude Code, install this repository as a plugin. The manifest is `.claude-plugin/plugin.json` at the repo root. The listing name is Grok Bot Task Inbox.
 
-- `/send-to-grok-bot` runs `send`. The same job id goes out once.
-- `/grok-bot-results` runs `harvest` and reads `results/<job_id>.md`.
+When you enable the plugin, Claude Code asks for the webhook URL and the webhook key. The key is a sensitive plugin option: Claude Code stores it in secure storage and does not put it in the command text. Plugin commands do not read `~/.grok-bridge/bots.env`. That file is only for running `grok_bridge.py` yourself.
 
-The first run executes `python3 grok_bridge.py setup`. That creates `~/.grok-bridge/bots.env` with mode 600 when the file is missing. You copy the webhook URL and key from the Grok Bot app into that file on your machine. Keep both out of the chat. The script does not print them.
+- `/send-to-grok-bot` calls the bundled local tool `send_task`. The same job id goes out once.
+- `/grok-bot-results` runs `harvest` and reads `results/<job_id>.md`. Collecting a reply does not need the webhook.
 
 ```bash
 git clone https://github.com/runesleo/grok-bot-bridge.git
@@ -87,7 +87,7 @@ claude --plugin-dir .
 - Grok Bot with routines and webhook triggers.
 - `harvest` needs the **Grok Bot macOS desktop app** on the same Mac: it reads the app's local chat copies, read-only.
 
-**Privacy:** the webhook key is the key to that inbox — keep it out of chats, screenshots and public repos. Config, ledger and results all live in `~/.grok-bridge/` (set `GROK_BRIDGE_HOME` to move all three); the script refuses non-`https://` webhook URLs; nothing is sent anywhere except the webhook you configured.
+**Privacy:** the webhook key is the key to that inbox — keep it out of chats, screenshots and public repos. For the plugin, Claude Code asks for the URL and key when you enable it, and the commands do not read a local webhook file. For the script on its own, config, ledger and results live in `~/.grok-bridge/` (set `GROK_BRIDGE_HOME` to move all three). The script refuses a webhook URL that does not use HTTPS. Nothing is sent anywhere except the webhook you configured.
 
 ## Verified
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0] - 2026-10-26
+
+### Changed
+- The Claude Code plugin asks for the webhook URL and key as `userConfig` (the key is `sensitive: true`) and sends through a bundled local MCP server. Plugin commands do not read `~/.grok-bridge/bots.env`.
+- Directory listing name is "Grok Bot Task Inbox". `name` stays `grok-bot-bridge`.
+- Added `.claude-plugin/icon.png` and pointed `plugin.json` `icon` at it.
+
+Running `grok_bridge.py` by itself still uses `~/.grok-bridge/bots.env`.
+
 ## [Unreleased]
 
 ### Added
