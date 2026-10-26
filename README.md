@@ -28,7 +28,7 @@ results/<job_id>.md ◀──harvest── "BRIDGE_RESULT <job_id>\n…" in the 
 
 ## Setup
 
-1. **Let the Bot build its inbox.** Send [setup-prompt.md](setup-prompt.md) in the Bot's chat.
+1. **Get a Bot with the inbox built in.** Install the ready-made template: https://x.ai/bot/nnPi-WVku_162DIxfqZ3Z ("派活入口 · Task Inbox"). Or, to add an inbox to a Bot you already have, send [setup-prompt.md](setup-prompt.md) in its chat.
 2. **Copy the webhook.** In the Grok Bot desktop app, open the Bot's details → Routines, **right-click** the "Task Inbox" row → Webhook, and copy the Webhook URL and key into `~/.grok-bridge/bots.env` (pick any name, one pair per Bot):
 
    ```
